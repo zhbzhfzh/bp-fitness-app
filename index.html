@@ -10,8 +10,8 @@
 <meta name="theme-color" content="#4CAF50">
 <meta name="description" content="降血压运动追踪助手">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
+<link rel="apple-touch-icon" href="icons/icon-192-v2.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512-v2.png">
 <title>降压运动</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
@@ -622,7 +622,7 @@ function init(){
   document.getElementById("reminderToggle").textContent=appData.reminder?"已开启":"开启";
   if(appData.reminder && "Notification" in window && Notification.permission==="granted"){
     var h=new Date().getHours();
-    if(h>=8&&h<=10){setTimeout(function(){new Notification("💚 降压运动",{body:"早上好！记得完成今天的运动计划哦~",icon:"icons/icon-192.png"})},5000)}
+    if(h>=8&&h<=10){setTimeout(function(){new Notification("💚 降压运动",{body:"早上好！记得完成今天的运动计划哦~",icon:"icons/icon-192-v2.png"})},5000)}
   }
 }
 init();
