@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -82,7 +82,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 .bp-record .bp-value{font-weight:700;font-size:16px}
 .bp-record .bp-time{font-size:12px;color:var(--text-secondary)}
 .bp-value.normal{color:var(--primary)}.bp-value.elevated{color:var(--warning)}.bp-value.high{color:var(--danger)}
-.bp-chart-container{width:100%;height:210px;margin-bottom:8px;position:relative}
+.bp-chart-container{width:100%;height:260px;margin-bottom:8px;position:relative}
 .bp-chart-container canvas{width:100%;height:100%}
 .bp-chart-legend{display:flex;gap:16px;justify-content:center;margin-top:6px;font-size:11px}
 .bp-chart-legend span{display:flex;align-items:center;gap:4px}
@@ -174,7 +174,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
   </div>
   <div class="card">
     <div class="card-title">📊 血压趋势</div>
-    <div class="bp-chart-container"><canvas id="bpChart"></canvas><div class="bp-chart-legend"><span><span class="dot dot-sys"></span>收缩压</span><span><span class="dot dot-dia"></span>舒张压</span></div></div>
+    <div class="bp-chart-container"><canvas id="bpChart"></canvas></div>
   </div>
   <div class="card">
     <div class="card-title">📋 近期记录</div>
@@ -394,7 +394,7 @@ function renderBPChart(){
   var ctx=canvas.getContext("2d");
   var container=canvas.parentElement;
   var w=container.clientWidth;
-  var h=210;
+  var h=260;
   var dpr=window.devicePixelRatio||1;
   canvas.width=w*dpr;canvas.height=h*dpr;
   canvas.style.width=w+"px";canvas.style.height=h+"px";
@@ -402,11 +402,11 @@ function renderBPChart(){
   ctx.clearRect(0,0,w,h);
   var data=appData.bpLog.slice(0,30).reverse();
   if(data.length<2){
-    ctx.fillStyle="#999";ctx.font="13px sans-serif";ctx.textAlign="center";
-    ctx.fillText("????????????",w/2,h/2);
+    ctx.fillStyle="#999";ctx.font="13px -apple-system,sans-serif";ctx.textAlign="center";
+    ctx.fillText("记录不足，至少需要2条数据",w/2,h/2);
     return;
   }
-  var pad={top:24,right:20,bottom:32,left:44};
+  var pad={top:34,right:54,bottom:38,left:50};
   var pw=w-pad.left-pad.right;
   var ph=h-pad.top-pad.bottom;
   var sys=data.map(function(r){return r.sys});
@@ -414,51 +414,90 @@ function renderBPChart(){
   var all=sys.concat(dia);
   var minV=Math.floor(Math.min.apply(null,all)/10)*10-10;
   var maxV=Math.ceil(Math.max.apply(null,all)/10)*10+10;
-  if(maxV-minV<20){var mid=(maxV+minV)/2;minV=mid-10;maxV=mid+10}
+  if(maxV-minV<30){var mid=(maxV+minV)/2;minV=mid-15;maxV=mid+15}
   var range=maxV-minV;
   function x(i){return pad.left+i/(Math.max(1,data.length-1))*pw}
   function y(v){return pad.top+ph-(v-minV)/range*ph}
-  // grid
-  ctx.strokeStyle="#eee";ctx.lineWidth=.5;
+  function smoothPath(pts,getX,getY){
+    ctx.beginPath();ctx.moveTo(getX(0),getY(pts[0]));
+    for(var i=0;i<pts.length-1;i++){
+      var cx=(getX(i)+getX(i+1))/2,cy=(getY(pts[i])+getY(pts[i+1]))/2;
+      ctx.quadraticCurveTo(getX(i),getY(pts[i]),cx,cy);
+    }
+    ctx.lineTo(getX(pts.length-1),getY(pts[pts.length-1]));
+  }
+  // Y-axis label
+  ctx.fillStyle="#888";ctx.font="bold 9px -apple-system,sans-serif";ctx.textAlign="center";
+  ctx.fillText("mmHg",pad.left-26,pad.top-10);
+  // Grid lines
+  ctx.strokeStyle="rgba(0,0,0,0.05)";ctx.lineWidth=1;ctx.setLineDash([5,5]);
   for(var v=minV;v<=maxV;v+=10){
     var yy=y(v);
-    ctx.beginPath();ctx.moveTo(pad.left,yy);ctx.lineTo(w-pad.right,yy);ctx.stroke();
-    ctx.fillStyle="#999";ctx.font="9px sans-serif";ctx.textAlign="right";
-    ctx.fillText(v,pad.left-6,yy+3);
+    ctx.beginPath();ctx.moveTo(pad.left+6,yy);ctx.lineTo(w-pad.right-6,yy);ctx.stroke();
+    ctx.fillStyle="#999";ctx.font="9px -apple-system,sans-serif";ctx.textAlign="right";
+    ctx.fillText(v,pad.left-8,yy+3);
   }
-  // systolic line
-  ctx.beginPath();ctx.moveTo(x(0),y(sys[0]));
-  for(var i=1;i<data.length;i++){ctx.lineTo(x(i),y(sys[i]))}
-  ctx.strokeStyle="#F44336";ctx.lineWidth=2.5;ctx.lineJoin="round";ctx.lineCap="round";ctx.stroke();
-  // systolic dots
+  ctx.setLineDash([]);
+  // ---- Systolic ----
+  // Gradient fill
+  var grad=ctx.createLinearGradient(0,pad.top,0,pad.top+ph);
+  grad.addColorStop(0,"rgba(244,67,54,0.28)");grad.addColorStop(1,"rgba(244,67,54,0.01)");
+  smoothPath(sys,x,y);
+  ctx.lineTo(x(data.length-1),pad.top+ph);ctx.lineTo(x(0),pad.top+ph);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
+  // Line
+  smoothPath(sys,x,y);
+  ctx.strokeStyle="#F44336";ctx.lineWidth=2.8;ctx.lineJoin="round";ctx.lineCap="round";
+  ctx.shadowColor="rgba(244,67,54,0.35)";ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
+  // Dots
   for(var i=0;i<data.length;i++){
-    ctx.beginPath();ctx.arc(x(i),y(sys[i]),4,0,2*Math.PI);
-    ctx.fillStyle="#fff";ctx.fill();
-    ctx.beginPath();ctx.arc(x(i),y(sys[i]),3,0,2*Math.PI);
+    ctx.beginPath();ctx.arc(x(i),y(sys[i]),5,0,2*Math.PI);
+    ctx.fillStyle="#fff";ctx.fill();ctx.strokeStyle="#F44336";ctx.lineWidth=2.2;ctx.stroke();
+    ctx.beginPath();ctx.arc(x(i),y(sys[i]),2.5,0,2*Math.PI);
     ctx.fillStyle="#F44336";ctx.fill();
   }
-  // diastolic line
-  ctx.beginPath();ctx.moveTo(x(0),y(dia[0]));
-  for(var i=1;i<data.length;i++){ctx.lineTo(x(i),y(dia[i]))}
-  ctx.strokeStyle="#2196F3";ctx.lineWidth=2.5;ctx.lineJoin="round";ctx.lineCap="round";ctx.stroke();
-  // diastolic dots
+  // ---- Diastolic ----
+  var grad2=ctx.createLinearGradient(0,pad.top,0,pad.top+ph);
+  grad2.addColorStop(0,"rgba(33,150,243,0.28)");grad2.addColorStop(1,"rgba(33,150,243,0.01)");
+  smoothPath(dia,x,y);
+  ctx.lineTo(x(data.length-1),pad.top+ph);ctx.lineTo(x(0),pad.top+ph);ctx.closePath();
+  ctx.fillStyle=grad2;ctx.fill();
+  // Line
+  smoothPath(dia,x,y);
+  ctx.strokeStyle="#2196F3";ctx.lineWidth=2.8;ctx.lineJoin="round";ctx.lineCap="round";
+  ctx.shadowColor="rgba(33,150,243,0.35)";ctx.shadowBlur=8;ctx.stroke();ctx.shadowBlur=0;
+  // Dots
   for(var i=0;i<data.length;i++){
-    ctx.beginPath();ctx.arc(x(i),y(dia[i]),4,0,2*Math.PI);
-    ctx.fillStyle="#fff";ctx.fill();
-    ctx.beginPath();ctx.arc(x(i),y(dia[i]),3,0,2*Math.PI);
+    ctx.beginPath();ctx.arc(x(i),y(dia[i]),5,0,2*Math.PI);
+    ctx.fillStyle="#fff";ctx.fill();ctx.strokeStyle="#2196F3";ctx.lineWidth=2.2;ctx.stroke();
+    ctx.beginPath();ctx.arc(x(i),y(dia[i]),2.5,0,2*Math.PI);
     ctx.fillStyle="#2196F3";ctx.fill();
   }
-  // x labels
-  ctx.fillStyle="#666";ctx.font="9px sans-serif";ctx.textAlign="center";
+  // Data labels (show every ~4th point)
+  var ls=Math.max(1,Math.floor(data.length/5));
+  for(var i=0;i<data.length;i+=ls){
+    ctx.fillStyle="#D32F2F";ctx.font="bold 10px -apple-system,sans-serif";ctx.textAlign="center";
+    ctx.fillText(sys[i],x(i),y(sys[i])-11);
+    ctx.fillStyle="#1565C0";ctx.font="bold 10px -apple-system,sans-serif";
+    ctx.fillText(dia[i],x(i),y(dia[i])+17);
+  }
+  // Legend
+  var lx=w-pad.right-62,ly=pad.top-18;
+  ctx.fillStyle="#F44336";ctx.beginPath();ctx.arc(lx+5,ly+3,4,0,2*Math.PI);ctx.fill();
+  ctx.fillStyle="#333";ctx.font="bold 10px -apple-system,sans-serif";ctx.textAlign="left";
+  ctx.fillText("收缩压",lx+13,ly+6);
+  ctx.fillStyle="#2196F3";ctx.beginPath();ctx.arc(lx+56,ly+3,4,0,2*Math.PI);ctx.fill();
+  ctx.fillText("舒张压",lx+64,ly+6);
+  // X-axis labels
+  ctx.fillStyle="#666";ctx.font="9px -apple-system,sans-serif";ctx.textAlign="center";
   var maxLabels=Math.min(data.length,6);
   var step=Math.max(1,Math.floor(data.length/maxLabels));
   for(var i=0;i<data.length;i+=step){
     var d=new Date(data[i].time);
     var ts=(d.getMonth()+1)+"/"+d.getDate();
-    ctx.fillText(ts,x(i),h-pad.bottom+14);
+    ctx.fillText(ts,x(i),h-pad.bottom+16);
   }
 }
-
 function renderBPLog(){
   var history=document.getElementById("bpHistory");
   if(appData.bpLog.length===0){history.innerHTML='<div style="text-align:center;color:var(--text-secondary);padding:20px">暂无记录，开始记录你的血压吧 🩺</div>';return;}
