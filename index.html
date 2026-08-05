@@ -102,7 +102,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 .stat-box{flex:1;background:var(--bg);border-radius:var(--radius-sm);padding:12px;text-align:center}
 .stat-box .stat-num{font-size:28px;font-weight:800;color:var(--primary)}
 .stat-box .stat-label{font-size:11px;color:var(--text-secondary);margin-top:2px}
-.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 24px;border-radius:24px;font-size:14px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+
+.install-banner{background:#FFF9C4;color:#333;padding:10px 16px;font-size:13px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #FDD835;line-height:1.5}
+.install-banner .ib-text{flex:1}
+.install-banner .ib-text strong{color:#F57F17}
+.install-banner .ib-close{font-size:20px;cursor:pointer;padding:4px 8px;color:#999;border:none;background:none;line-height:1}.toast{position:fixed;top:80px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 24px;border-radius:24px;font-size:14px;z-index:300;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1}
 @media(max-width:360px){.week-grid{gap:2px}.week-day{padding:6px 1px;font-size:10px}}
 </style>
@@ -236,6 +240,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hira
 </div>
 
 <script>
+// Show install banner on iOS Safari (not in standalone mode)
+(function(){
+  var isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent)&&!window.MSStream;
+  var isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+  if(isIOS&&!isStandalone&&!localStorage.getItem('ibDismissed')){
+    document.getElementById('installBanner').style.display='flex';
+    document.getElementById('installBanner').querySelector('.ib-close').onclick=function(){
+      localStorage.setItem('ibDismissed','1');
+    };
+  }
+})();
 (function(){
 var WEEK_PLAN = {
   1: [{name:"快走",duration:30,icon:"🏃",cls:"icon-walk"},{name:"力量训练",duration:20,icon:"💪",cls:"icon-strength"}],

@@ -1,8 +1,9 @@
-﻿{
+{
   "name": "降压运动 - BP Fitness",
   "short_name": "降压运动",
   "description": "降血压运动追踪助手 · 训练计划 · 计时打卡 · 血压记录",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#4CAF50",
